@@ -15,7 +15,7 @@ const corsOptions = {
 }
 
 app.use(cors(corsOptions));
-app.use(bodyParser); 
+app.use(bodyParser.json()); 
 
 //check server health
 app.get("/health",(req,res)=>{
