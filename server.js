@@ -3,9 +3,13 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const nodemailer = require("nodemailer");
 
 const app = express();
 const port = 3000;
+
+const email = process.env.EMAIL;
+const emailPassword = process.env.EMAIL_PASSWORD;
 
 const corsOptions = {
   origin: "*",
@@ -17,14 +21,23 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(bodyParser.json());
 
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: email,
+    pass: emailPassword,
+  },
+});
+
 let users = [];
+let passChangeCodes = [];
 
 //send users array to client
 app.get("/users", (req, res) => {
   res.json(users);
 });
 
-//apped to users array from client
+//append to users array from client
 app.post("/users", (req, res) => {
   const newUser = req.body.user;
 
@@ -61,6 +74,49 @@ app.post("/users", (req, res) => {
   } else {
     return res.status(400).json({ message: "User is required" });
   }
+});
+
+app.post("/passCode", (req, res) => {
+  const clientEmail = req.body.email;
+
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += Math.floor(Math.random() * 10).toString();
+  }
+
+  passChangeCodes.push({ email: clientEmail, code: code });
+
+  const mailOptions = {
+    from: email,
+    to: clientEmail,
+    subject: "Reset password",
+    text: code,
+  };
+
+  transporter.sendMail(mailOptions, (error, info) => {
+    if (error) {
+      console.log("Error", error.toString());
+      return res.status(500).send(error.toString());
+    }
+    res.status(200).json({ code: code, message: "Email sent: " + info.response });
+  });
+});
+
+app.post("/changePassword", (req, res) => {
+  const clientEmail = req.body.credentials.email;
+  const clientPassword = req.body.credentials.password;
+  const clientConfirmPassword = req.body.credentials.confirmNewPassWord;
+  const passChangeCode = req.body.credentials.code;
+
+  const user = users.find((user) => user.email === clientEmail);
+  const passCodeRecord = passChangeCodes.find((record) => record.email === clientEmail);
+
+  if (clientPassword === clientConfirmPassword && passCodeRecord && passCodeRecord.code === passChangeCode) {
+    user.password = clientConfirmPassword;
+    return res.status(201).json({ message: "Password changed", users: users });
+  }
+
+  return res.status(400).json({ message: "Error changing password" });
 });
 
 //check server health
