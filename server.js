@@ -48,7 +48,7 @@ app.post("/users", (req, res) => {
     }
 
     if (validCredentials) {
-      if (!users.includes(email)) {
+      if (users.filter((user) => user.email === email).length === 0) {
         users.push({ email: email, password: password });
         message = "User added successfully";
       } else {
