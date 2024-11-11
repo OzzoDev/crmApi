@@ -29,34 +29,33 @@ app.post("/users", (req, res) => {
   const newUser = req.body.user;
 
   if (newUser) {
-
     const email = newUser.email;
     const confirmEmail = newUser.confirmEmail;
     const password = newUser.password;
     const confirmPassword = newUser.confirmPassword;
 
-    let validCredentials = true; 
-    let message = ""; 
+    let validCredentials = true;
+    let message = "";
 
-    if(email!==confirmEmail){
-        validCredentials = false;
-    }else if(!email.includes(".")&&!email.includes("@")){
-        validCredentials = false;
-    }else if(password!==confirmPassword){
-        validCredentials = false;
-    }else if(password.length<8){
-        validCredentials = false;
+    if (email !== confirmEmail) {
+      validCredentials = false;
+    } else if (!email.includes(".") && !email.includes("@")) {
+      validCredentials = false;
+    } else if (password !== confirmPassword) {
+      validCredentials = false;
+    } else if (password.length < 8) {
+      validCredentials = false;
     }
 
-    if(validCredentials){
-        if(!users.includes(email)){
-            users.push({email:email,password:password}); 
-            message="User added successfully"; 
-        }else{
-            message="User alreday exists"
-        }
-    }else{
-        message="Form is not valid": 
+    if (validCredentials) {
+      if (!users.includes(email)) {
+        users.push({ email: email, password: password });
+        message = "User added successfully";
+      } else {
+        message = "User alreday exists";
+      }
+    } else {
+      message = "Form is not valid";
     }
     return res.status(201).json({ message: message, users });
   } else {
