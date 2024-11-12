@@ -43,16 +43,13 @@ app.post("/users", (req, res) => {
 
   if (newUser) {
     const email = newUser.email;
-    const confirmEmail = newUser.confirmEmail;
     const password = newUser.password;
     const confirmPassword = newUser.confirmPassword;
 
     let validCredentials = true;
     let message = "";
 
-    if (email !== confirmEmail) {
-      validCredentials = false;
-    } else if (!email.includes(".") && !email.includes("@")) {
+    if (!email.includes(".") && !email.includes("@")) {
       validCredentials = false;
     } else if (password !== confirmPassword) {
       validCredentials = false;
