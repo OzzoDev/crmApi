@@ -32,7 +32,14 @@ const transporter = nodemailer.createTransport({
 let users = [];
 let passChangeCodes = [];
 
-//send users array to client
+function generate6DigitCode() {
+  let code = "";
+  for (let i = 0; i < 6; i++) {
+    code += Math.floor(Math.random() * 10).toString();
+  }
+  return code;
+}
+
 app.get("/users", (req, res) => {
   res.json(users);
 });
@@ -73,13 +80,26 @@ app.post("/users", (req, res) => {
   }
 });
 
+app.post("/signIn", (req, res) => {
+  const clientEmail = req.body.credentials.email;
+  const clientPassword = req.body.credentials.password;
+
+  const user = users.find((u) => u.email === clientEmail);
+
+  console.log(user);
+  console.log(clientEmail);
+  console.log(clientPassword);
+
+  if (user && user.password === clientPassword) {
+    return res.status(201).json({ ok: true, path: "organization.html" });
+  }
+  return res.status(400).json({ message: "Credentials are invalid" });
+});
+
 app.post("/passCode", (req, res) => {
   const clientEmail = req.body.email;
 
-  let code = "";
-  for (let i = 0; i < 6; i++) {
-    code += Math.floor(Math.random() * 10).toString();
-  }
+  let code = generate6DigitCode();
 
   passChangeCodes.push({ email: clientEmail, code: code });
 
@@ -95,25 +115,43 @@ app.post("/passCode", (req, res) => {
       console.log("Error", error.toString());
       return res.status(500).send(error.toString());
     }
-    res.status(200).json({ code: code, message: "Email sent: " + info.response });
+    res.status(200).json({ message: "Email sent: " + info.response });
   });
 });
 
 app.post("/changePassword", (req, res) => {
   const clientEmail = req.body.credentials.email;
   const clientPassword = req.body.credentials.password;
-  const clientConfirmPassword = req.body.credentials.confirmNewPassWord;
+  const clientConfirmPassword = req.body.credentials.confirmPassword;
   const passChangeCode = req.body.credentials.code;
 
   const user = users.find((user) => user.email === clientEmail);
-  const passCodeRecord = passChangeCodes.find((record) => record.email === clientEmail);
+  const passCodeRecord = passChangeCodes.filter((record) => record.email === clientEmail);
 
-  if (clientPassword === clientConfirmPassword && passCodeRecord && passCodeRecord.code === passChangeCode) {
-    user.password = clientConfirmPassword;
-    return res.status(201).json({ message: "Password changed", users: users });
+  const serverPassChangeCode = passCodeRecord[passCodeRecord.length - 1];
+
+  let errorMessage = "Unknown error";
+
+  if (clientPassword.length > 7) {
+    if (clientPassword === clientConfirmPassword) {
+      if (serverPassChangeCode) {
+        if (serverPassChangeCode.code === passChangeCode) {
+          user.password = clientConfirmPassword;
+          return res.status(201).json({ message: "Password changed", users: users });
+        } else {
+          errorMessage = "Codes do not match";
+        }
+      } else {
+        errorMessage = "Could not find verification code";
+      }
+    } else {
+      errorMessage = "Password must match";
+    }
+  } else {
+    errorMessage = "Password must be atleast 7 characters";
   }
 
-  return res.status(400).json({ message: "Error changing password" });
+  return res.status(400).json({ message: errorMessage, passLen: clientPassword.length });
 });
 
 //check server health
